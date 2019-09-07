@@ -62,6 +62,8 @@ public struct ImageTaskMetrics: CustomDebugStringConvertible {
 
         public internal(set) var decodeStartDate: Date?
         public internal(set) var decodeEndDate: Date?
+        
+        public internal(set) var sessionTaskMetrics: URLSessionTaskMetrics?
 
         @available(*, deprecated, message: "Please use the same property on `ImageTaskMetrics` instead.")
         public internal(set) var processStartDate: Date?

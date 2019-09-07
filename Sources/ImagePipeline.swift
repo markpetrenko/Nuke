@@ -137,10 +137,10 @@ public /* final */ class ImagePipeline: ImageTaskDelegate {
 
     /// Shared image pipeline.
     public static var shared = ImagePipeline()
-
+    
     /// The closure that gets called each time the task is completed (or cancelled).
     /// Guaranteed to be called on the main thread.
-    public var didFinishCollectingMetrics: ((ImageTask, ImageTaskMetrics) -> Void)?
+    public var didFinishCollectingMetrics: ((ImageTask, ImageResponse?, ImageTaskMetrics) -> Void)?
 
     public struct Configuration {
         /// Image cache used by the pipeline.
@@ -421,6 +421,12 @@ public /* final */ class ImagePipeline: ImageTaskDelegate {
                     self?._session(session, didReceiveData: data, response: response)
                 }
             },
+            didCollectTaskMetrics: { [weak self, weak session] (taskMetrics) in
+                self?.queue.async {
+                    guard let session = session else { return }
+                    self?._session(session, didCollectTaskMetrics: taskMetrics)
+                }
+            },
             completion: { [weak self, weak session] (error) in
                 finish() // Important! Mark Operation as finished.
                 self?.queue.async {
@@ -432,6 +438,10 @@ public /* final */ class ImagePipeline: ImageTaskDelegate {
             task.cancel()
             finish() // Make sure we always finish the operation.
         }
+    }
+    
+    private func _session(_ session: ImageLoadingSession, didCollectTaskMetrics taskMetrics: URLSessionTaskMetrics) {
+        session.metrics.sessionTaskMetrics = taskMetrics
     }
 
     private func _session(_ session: ImageLoadingSession, didReceiveData chunk: Data, response: URLResponse) {
@@ -751,7 +761,7 @@ public /* final */ class ImagePipeline: ImageTaskDelegate {
 
         guard let didCollectMetrics = didFinishCollectingMetrics else { return }
         DispatchQueue.main.async {
-            didCollectMetrics(task, task.metrics)
+            didCollectMetrics(task, nil ,task.metrics)
         }
     }
 
@@ -760,7 +770,7 @@ public /* final */ class ImagePipeline: ImageTaskDelegate {
         DispatchQueue.main.async {
             guard !task.isCancelled else { return }
             completion?(response, error)
-            self.didFinishCollectingMetrics?(task, task.metrics)
+            self.didFinishCollectingMetrics?(task, response, task.metrics)
         }
     }
 
